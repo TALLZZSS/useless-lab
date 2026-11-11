@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 001 呼吸按钮 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #7ee787; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #08080a;
+    background-image: radial-gradient(50% 42% at 50% 46%, rgba(126, 231, 135, .07), transparent 72%);
+    color: #e9e9ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: clamp(1.6rem, 4vh, 2.8rem);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .line {
+    min-height: 1.7em;
+    max-width: 22em;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #c6c6cf;
+    transition: color .4s ease;
+  }
+  .btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(52vmin, 300px);
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid rgba(126, 231, 135, .32);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    animation: breathe 8s ease-in-out infinite;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .btn::before {
+    content: "";
+    position: absolute;
+    inset: -16%;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(126, 231, 135, .17), transparent 62%);
+    animation: glow 8s ease-in-out infinite;
+  }
+  .btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: inset 0 0 44px rgba(126, 231, 135, .09);
+  }
+  .btn i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 14px 3px rgba(126, 231, 135, .5);
+  }
+  .btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 10px; }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.055); }
+  }
+  @keyframes glow {
+    0%, 100% { opacity: .45; }
+    50% { opacity: 1; }
+  }
+  .count, .hint {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+  }
+  .count { font-size: 10px; color: #7a7a84; }
+  .hint { font-size: 10px; color: #4a4a52; }
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .btn::before { animation: none; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<div class="stage">
+  <p class="line" id="line">它在呼吸。你能做的只有看着。</p>
+  <button class="btn" id="btn" aria-label="一个什么也不做的按钮"><i></i></button>
+  <p class="count" id="count">已按下 0 次</p>
+  <p class="hint">按下也不会有任何事发生</p>
+</div>
+<script>
+  const LINES = [
+    "什么也没发生。",
+    "还是没有。",
+    "你开始怀疑了。",
+    "你确定这不是 bug 吗。",
+    "我们已经按了五次了。",
+    "……",
+    "它不会停的。",
+    "你手不累吗。",
+    "我承认，我开始喜欢你了。",
+    "第十次。我记下了。"
+  ];
+
+  const line = document.getElementById("line");
+  const btn = document.getElementById("btn");
+  const count = document.getElementById("count");
+  let n = 0;
+  let idleTimer;
+
+  function idle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (n === 0) line.textContent = "它还在呼吸。你没碰它。";
+    }, 40000);
+  }
+
+  btn.addEventListener("click", () => {
+    n += 1;
+    count.textContent = "已按下 " + n + " 次";
+    line.textContent = n <= LINES.length ? LINES[n - 1] : "第 " + n + " 次。还是没有。";
+    idle();
+  });
+
+  idle();
+</script>
+</body>
+</html>

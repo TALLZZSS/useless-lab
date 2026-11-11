@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 004 按住才有的音 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #d2a8ff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #08080a;
+    background-image: radial-gradient(46% 40% at 50% 50%, rgba(210, 168, 255, .08), transparent 72%);
+    color: #e9e9ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: clamp(1.4rem, 4vh, 2.2rem);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .q {
+    min-height: 1.6em;
+    font-size: 15px;
+    letter-spacing: .06em;
+    color: #c6c6cf;
+    transition: color .35s ease;
+  }
+  .orb {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(44vmin, 210px);
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid rgba(210, 168, 255, .3);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 42%, rgba(210, 168, 255, .14), transparent 66%);
+    cursor: pointer;
+    touch-action: none;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .3s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .orb::after {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 70px 8px rgba(210, 168, 255, .12);
+    opacity: .5;
+    transition: opacity .3s ease;
+  }
+  .orb i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 16px 4px rgba(210, 168, 255, .55);
+    transition: transform .18s ease;
+  }
+  .orb.on {
+    transform: scale(1.05);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 60px rgba(210, 168, 255, .16);
+  }
+  .orb.on::after { opacity: 1; }
+  .orb.on i { transform: scale(1.6); }
+  .orb:focus-visible { outline: 1px solid var(--accent); outline-offset: 12px; }
+  .now, .total, .tip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+  }
+  .now { font-size: 11px; color: #8b8b93; font-variant-numeric: tabular-nums; }
+  .total { font-size: 10px; color: #5c5c65; }
+  .tip { font-size: 10px; color: #43434b; }
+  @media (prefers-reduced-motion: reduce) {
+    .orb, .orb i { transition: none; }
+    .orb.on { transform: none; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<div class="stage">
+  <p class="q" id="q">按住。</p>
+  <button class="orb" id="orb" aria-label="按住发出一个和弦"><i></i></button>
+  <p class="now" id="now">0.0 秒</p>
+  <p class="total" id="total"></p>
+  <p class="tip">你只有一个和弦</p>
+</div>
+<script>
+  const KEY = "ulab.hold-the-note.total.v1";
+  const q = document.getElementById("q");
+  const orb = document.getElementById("orb");
+  const now = document.getElementById("now");
+  const totalEl = document.getElementById("total");
+
+  let audio = null;
+  let master = null;
+  let holding = false;
+  let held = 0;
+  let startedAt = 0;
+  let total = 0;
+  let raf = 0;
+
+  try { total = Number(localStorage.getItem(KEY)) || 0; } catch (_) { total = 0; }
+
+  function showTotal() {
+    totalEl.textContent = total > 0 ? "你一共按住了 " + total.toFixed(1) + " 秒" : "";
+  }
+
+  function saveTotal() {
+    try { localStorage.setItem(KEY, String(total)); } catch (_) {}
+  }
+
+  function initAudio() {
+    if (audio) {
+      if (audio.state === "suspended") audio.resume();
+      return true;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { q.textContent = "这个浏览器不想出声。"; return false; }
+
+    audio = new AC();
+    master = audio.createGain();
+    master.gain.value = 0;
+
+    const filter = audio.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1300;
+    master.connect(filter);
+    filter.connect(audio.destination);
+
+    [220, 277.18, 329.63].forEach((freq, i) => {
+      const osc = audio.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      osc.detune.value = (i - 1) * 5;
+      osc.connect(master);
+      osc.start();
+    });
+    return true;
+  }
+
+  function start(e) {
+    if (e) e.preventDefault();
+    if (holding) return;
+    if (!initAudio()) return;
+    holding = true;
+    startedAt = performance.now();
+    orb.classList.add("on");
+    q.textContent = "现在有了。";
+    master.gain.cancelScheduledValues(audio.currentTime);
+    master.gain.setValueAtTime(master.gain.value, audio.currentTime);
+    master.gain.linearRampToValueAtTime(0.16, audio.currentTime + 0.07);
+
+    cancelAnimationFrame(raf);
+    const tick = (t) => {
+      if (!holding) return;
+      held = (t - startedAt) / 1000;
+      now.textContent = held.toFixed(1) + " 秒";
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+
+  function stop() {
+    if (!holding) return;
+    holding = false;
+    orb.classList.remove("on");
+    cancelAnimationFrame(raf);
+    total += (performance.now() - startedAt) / 1000;
+    saveTotal();
+    showTotal();
+    now.textContent = "0.0 秒";
+    q.textContent = "没了。";
+
+    if (audio && master) {
+      master.gain.cancelScheduledValues(audio.currentTime);
+      master.gain.setValueAtTime(master.gain.value, audio.currentTime);
+      master.gain.linearRampToValueAtTime(0.0001, audio.currentTime + 0.5);
+    }
+    setTimeout(() => { if (!holding) q.textContent = "按住。"; }, 1400);
+  }
+
+  orb.addEventListener("pointerdown", start);
+  window.addEventListener("pointerup", stop);
+  window.addEventListener("pointercancel", stop);
+  window.addEventListener("blur", stop);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); });
+
+  showTotal();
+</script>
+</body>
+</html>

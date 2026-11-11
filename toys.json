@@ -1,0 +1,50 @@
+[
+  {
+    "id": "breathing-button",
+    "title": "呼吸按钮",
+    "desc": "一个只会呼吸、什么也不做的按钮。你可以一直按它。",
+    "tag": "禅",
+    "glyph": "◉",
+    "accent": "#7ee787"
+  },
+  {
+    "id": "patience-gate",
+    "title": "十秒的耐心",
+    "desc": "保持不动十秒，它会说一句话。动了就重来。",
+    "tag": "耐心",
+    "glyph": "○",
+    "accent": "#79c0ff"
+  },
+  {
+    "id": "runaway-close",
+    "title": "点不中的关闭键",
+    "desc": "一个永远躲开你光标的 ✕，追够八秒它会自己投降。",
+    "tag": "幽默",
+    "glyph": "✕",
+    "accent": "#ff7b72"
+  },
+  {
+    "id": "hold-the-note",
+    "title": "按住才有的音",
+    "desc": "只有一个和弦，按住才响，松手就没了。",
+    "tag": "声音",
+    "glyph": "♪",
+    "accent": "#d2a8ff"
+  },
+  {
+    "id": "slow-shadow",
+    "title": "慢两秒的影子",
+    "desc": "你的光标有一个慢两秒的影子，它永远追不上你。",
+    "tag": "视觉",
+    "glyph": "◌",
+    "accent": "#ffa657"
+  },
+  {
+    "id": "memento",
+    "title": "正在消失的一句话",
+    "desc": "一句话在你面前一个个字地消失，刷新也救不回来。",
+    "tag": "时间",
+    "glyph": "…",
+    "accent": "#ff9bce"
+  }
+]

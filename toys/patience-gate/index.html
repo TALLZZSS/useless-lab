@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 002 十秒的耐心 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #79c0ff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #08080a;
+    background-image: radial-gradient(50% 42% at 50% 50%, rgba(121, 192, 255, .06), transparent 72%);
+    color: #e9e9ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: 1.6rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .prompt {
+    min-height: 1.4em;
+    font-size: 15px;
+    letter-spacing: .04em;
+    color: #c6c6cf;
+    transition: color .25s ease;
+  }
+  .prompt.bad { color: #ff7b72; }
+  .dial { position: relative; width: min(58vmin, 280px); aspect-ratio: 1; }
+  .dial svg { display: block; width: 100%; height: 100%; transition: opacity .5s ease; }
+  .track { fill: none; stroke: rgba(255, 255, 255, .07); stroke-width: 1.5; }
+  .prog {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(121, 192, 255, .55));
+  }
+  .pct {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .18em;
+    color: #6f6f79;
+    transition: opacity .4s ease;
+  }
+  .sub {
+    min-height: 1.5em;
+    max-width: 20em;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #5c5c65;
+    transition: opacity .4s ease;
+  }
+  .say {
+    opacity: 0;
+    transform: translateY(6px);
+    font-size: clamp(1.6rem, 6vw, 2.2rem);
+    letter-spacing: .1em;
+    color: #eef4ff;
+    transition: opacity 1.1s ease, transform 1.1s ease;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+  .say.on { opacity: 1; transform: none; }
+  .again {
+    margin-top: .4rem;
+    padding: .7em 1.3em;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    background: transparent;
+    color: #9a9aa4;
+    font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s ease, color .2s ease, border-color .2s ease;
+  }
+  .again.on { opacity: 1; pointer-events: auto; }
+  .again:hover { color: var(--accent); border-color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) {
+    .say { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<div class="stage">
+  <p class="prompt" id="prompt">请不要动。</p>
+  <div class="dial">
+    <svg viewBox="0 0 200 200" id="svg" aria-hidden="true">
+      <circle class="track" cx="100" cy="100" r="92"></circle>
+      <circle class="prog" id="prog" cx="100" cy="100" r="92" transform="rotate(-90 100 100)"></circle>
+    </svg>
+    <div class="pct" id="pct">0%</div>
+    <div class="say" id="say">你好。</div>
+  </div>
+  <p class="sub" id="sub">保持十秒不要动，我会说一句话。</p>
+  <button class="again" id="again">再来一次</button>
+</div>
+<script>
+  const DURATION = 10000;
+  const ARM_DELAY = 450;
+
+  const prompt = document.getElementById("prompt");
+  const sub = document.getElementById("sub");
+  const pct = document.getElementById("pct");
+  const prog = document.getElementById("prog");
+  const svg = document.getElementById("svg");
+  const say = document.getElementById("say");
+  const again = document.getElementById("again");
+
+  const C = 2 * Math.PI * 92;
+  prog.style.strokeDasharray = C;
+  prog.style.strokeDashoffset = C;
+
+  let armed = false;
+  let done = false;
+  let started = 0;
+  let moved = 0;
+  let last = null;
+
+  function reset(text) {
+    done = false;
+    armed = false;
+    started = 0;
+    moved = 0;
+    last = null;
+    say.classList.remove("on");
+    again.classList.remove("on");
+    svg.style.opacity = "1";
+    pct.style.opacity = "1";
+    prog.style.strokeDashoffset = C;
+    pct.textContent = "0%";
+    prompt.textContent = text || "请不要动。";
+    prompt.classList.toggle("bad", Boolean(text));
+    sub.textContent = "保持十秒不要动，我会说一句话。";
+    clearTimeout(armTimer);
+    armTimer = setTimeout(() => {
+      if (done) return;
+      prompt.classList.remove("bad");
+      prompt.textContent = "请不要动。";
+      armed = true;
+      started = 0;
+    }, text ? 700 : 0);
+  }
+
+  let armTimer;
+
+  function fail() {
+    if (done) return;
+    reset("你动了。");
+  }
+
+  function finish() {
+    done = true;
+    armed = false;
+    pct.style.opacity = "0";
+    svg.style.opacity = ".18";
+    say.classList.add("on");
+    prompt.textContent = " ";
+    sub.textContent = "就这一句。什么别的也没有。";
+    setTimeout(() => again.classList.add("on"), 1800);
+  }
+
+  function frame(t) {
+    if (!done && armed) {
+      if (!started) started = t;
+      const p = Math.min(1, (t - started) / DURATION);
+      prog.style.strokeDashoffset = C * (1 - p);
+      pct.textContent = Math.round(p * 100) + "%";
+      if (p >= 1) finish();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.addEventListener("pointermove", (e) => {
+    if (!armed || done) { last = { x: e.clientX, y: e.clientY }; return; }
+    if (!last) { last = { x: e.clientX, y: e.clientY }; return; }
+    moved += Math.hypot(e.clientX - last.x, e.clientY - last.y);
+    last = { x: e.clientX, y: e.clientY };
+    if (moved > 24) fail();
+  }, { passive: true });
+
+  for (const type of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+    window.addEventListener(type, () => { if (armed && !done) fail(); }, { passive: true });
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && armed && !done) reset("你离开了。");
+  });
+
+  again.addEventListener("click", () => reset());
+
+  reset();
+</script>
+</body>
+</html>

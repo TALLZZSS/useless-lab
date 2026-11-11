@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 006 正在消失的一句话 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #ff9bce; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #08080a;
+    background-image: radial-gradient(50% 40% at 50% 48%, rgba(255, 155, 206, .06), transparent 72%);
+    color: #e9e9ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: 2rem;
+    max-width: 760px;
+    padding: 2rem 1.6rem;
+    text-align: center;
+  }
+  .sentence {
+    margin: 0;
+    min-height: 1.9em;
+    font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", Georgia, serif;
+    font-size: clamp(1.45rem, 5.4vw, 2.5rem);
+    line-height: 1.9;
+    letter-spacing: .08em;
+    color: #f2f2f5;
+  }
+  .sentence span {
+    display: inline-block;
+    transition: opacity .85s ease, filter .85s ease, transform .85s ease;
+  }
+  .sentence span.gone {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(-3px);
+  }
+  .counter {
+    font: 400 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .2em;
+    color: #5c5c65;
+    font-variant-numeric: tabular-nums;
+  }
+  .note {
+    min-height: 1.6em;
+    font: 400 10px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #4a4a52;
+  }
+  .again {
+    padding: .8em 1.5em;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    background: transparent;
+    color: #9a9aa4;
+    font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, opacity .5s;
+  }
+  .again:hover { color: var(--accent); border-color: var(--accent); }
+  .again[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .sentence span { transition-duration: .15s; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<div class="stage">
+  <p class="sentence" id="sentence" aria-label="一句正在消失的话"></p>
+  <p class="counter" id="counter"></p>
+  <p class="note" id="note">一个字一个字地消失，刷新也救不回来。</p>
+  <button class="again" id="again" hidden>重新开始</button>
+</div>
+<script>
+  const TEXT = "我们把时间花在让时间过去上。";
+  const KEY = "ulab.memento.v1";
+  const STEP = 1500;
+  const FADE = 900;
+
+  const sentence = document.getElementById("sentence");
+  const counter = document.getElementById("counter");
+  const note = document.getElementById("note");
+  const again = document.getElementById("again");
+
+  let timer = 0;
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw === null) return TEXT.length;
+      const n = Number(raw);
+      return Number.isFinite(n) ? Math.max(0, Math.min(TEXT.length, n)) : TEXT.length;
+    } catch (_) {
+      return TEXT.length;
+    }
+  }
+
+  function save(n) {
+    try { localStorage.setItem(KEY, String(n)); } catch (_) {}
+  }
+
+  function render(remaining) {
+    sentence.textContent = "";
+    for (let i = 0; i < remaining; i++) {
+      const span = document.createElement("span");
+      span.textContent = TEXT[i];
+      sentence.appendChild(span);
+    }
+    counter.textContent = remaining > 0
+      ? String(remaining).padStart(2, "0") + " / " + TEXT.length
+      : "";
+    note.textContent = remaining > 0
+      ? "一个字一个字地消失，刷新也救不回来。"
+      : "它说完了。";
+    again.hidden = remaining > 0;
+  }
+
+  function start(remaining) {
+    render(remaining);
+    clearInterval(timer);
+    if (remaining === 0) return;
+
+    timer = setInterval(() => {
+      const spans = sentence.querySelectorAll("span:not(.gone)");
+      if (spans.length === 0) {
+        clearInterval(timer);
+        save(0);
+        counter.textContent = "";
+        note.textContent = "它说完了。";
+        again.hidden = false;
+        return;
+      }
+      const last = spans[spans.length - 1];
+      last.classList.add("gone");
+      const left = spans.length - 1;
+      counter.textContent = left > 0 ? String(left).padStart(2, "0") + " / " + TEXT.length : "";
+      save(left);
+      setTimeout(() => { if (last.isConnected) last.remove(); }, FADE);
+    }, STEP);
+  }
+
+  again.addEventListener("click", () => {
+    save(TEXT.length);
+    start(TEXT.length);
+  });
+
+  start(load());
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 003 点不中的关闭键 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #ff7b72; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #08080a;
+    background-image: radial-gradient(50% 42% at 50% 50%, rgba(255, 123, 114, .06), transparent 72%);
+    color: #e9e9ec;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: 1.4rem;
+    width: 100%;
+    padding: 2rem 1.2rem;
+  }
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: min(90vw, 430px);
+    min-height: 220px;
+    padding: 2.4rem 2rem 2rem;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012));
+    box-shadow: 0 24px 70px -30px rgba(0, 0, 0, .9);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .card.gone { opacity: 0; transform: scale(.97); pointer-events: none; }
+  .x {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 9px;
+    background: transparent;
+    color: #8b8b93;
+    font-size: 13px;
+    cursor: pointer;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    transition: transform .16s cubic-bezier(.2, .8, .2, 1), color .3s, border-color .3s, box-shadow .3s;
+  }
+  .x.tired {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 0 18px -4px var(--accent);
+  }
+  .x:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+  h1 { margin: 0 0 .8rem; font-size: 17px; font-weight: 600; }
+  p { margin: 0; max-width: 24em; font-size: 13.5px; line-height: 1.75; color: #8b8b93; }
+  .hint {
+    font: 400 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #4a4a52;
+    transition: color .4s;
+  }
+  .end { text-align: center; animation: rise .6s ease both; }
+  .end[hidden] { display: none; }
+  .big { font-size: clamp(1.7rem, 6vw, 2.2rem); letter-spacing: .08em; color: #eef4ff; }
+  .small { margin-top: .9rem; font-size: 13px; color: #6f6f79; }
+  .again {
+    margin-top: 1.8rem;
+    padding: .75em 1.4em;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    background: transparent;
+    color: #9a9aa4;
+    font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .14em;
+    cursor: pointer;
+    transition: color .2s, border-color .2s;
+  }
+  .again:hover { color: var(--accent); border-color: var(--accent); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<div class="stage">
+  <div class="card" id="card">
+    <button class="x" id="x" aria-label="关闭这个窗口">✕</button>
+    <h1>确定要关闭吗？</h1>
+    <p id="msg">这个窗口并不存在，但关掉它需要一点努力。</p>
+  </div>
+  <p class="hint" id="hint">它不想被关掉</p>
+  <div class="end" id="end" hidden>
+    <p class="big">恭喜。</p>
+    <p class="small">你关掉了一个不存在的窗口。</p>
+    <button class="again" id="again">再来一次</button>
+  </div>
+</div>
+<script>
+  const card = document.getElementById("card");
+  const x = document.getElementById("x");
+  const msg = document.getElementById("msg");
+  const hint = document.getElementById("hint");
+  const end = document.getElementById("end");
+  const again = document.getElementById("again");
+
+  const DODGE_DISTANCE = 108;
+  const LIMIT = 8500;
+
+  let ox = 0;
+  let oy = 0;
+  let tries = 0;
+  let gaveUp = false;
+  let timer;
+
+  function giveUp() {
+    if (gaveUp) return;
+    gaveUp = true;
+    clearTimeout(timer);
+    x.classList.add("tired");
+    msg.textContent = "……行吧。你关吧。";
+    hint.textContent = "它放弃了";
+  }
+
+  function dodge(cx, cy) {
+    if (gaveUp) return;
+    const r = x.getBoundingClientRect();
+    const centerX = r.left + r.width / 2;
+    const centerY = r.top + r.height / 2;
+    const dx = centerX - cx;
+    const dy = centerY - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > DODGE_DISTANCE) return;
+
+    tries += 1;
+    if (tries >= 14) { giveUp(); return; }
+
+    const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.9;
+    const push = 54 + Math.random() * 26;
+
+    const cr = card.getBoundingClientRect();
+    const baseLeft = r.left - ox;
+    const baseTop = r.top - oy;
+    const margin = 10;
+
+    ox = Math.min(Math.max(ox + Math.cos(angle) * push, cr.left + margin - baseLeft), cr.right - margin - r.width - baseLeft);
+    oy = Math.min(Math.max(oy + Math.sin(angle) * push, cr.top + margin - baseTop), cr.bottom - margin - r.height - baseTop);
+
+    x.style.setProperty("--dx", ox.toFixed(1) + "px");
+    x.style.setProperty("--dy", oy.toFixed(1) + "px");
+    hint.textContent = "它躲开了（" + tries + "）";
+  }
+
+  window.addEventListener("pointermove", (e) => dodge(e.clientX, e.clientY), { passive: true });
+
+  x.addEventListener("pointerdown", (e) => {
+    if (gaveUp) return;
+    e.preventDefault();
+    dodge(e.clientX + 1, e.clientY + 1);
+  });
+
+  x.addEventListener("click", () => {
+    if (!gaveUp) return;
+    card.classList.add("gone");
+    hint.textContent = "";
+    setTimeout(() => { end.hidden = false; }, 420);
+  });
+
+  again.addEventListener("click", () => {
+    ox = oy = tries = 0;
+    gaveUp = false;
+    x.classList.remove("tired");
+    x.style.setProperty("--dx", "0px");
+    x.style.setProperty("--dy", "0px");
+    card.classList.remove("gone");
+    end.hidden = true;
+    msg.textContent = "这个窗口并不存在，但关掉它需要一点努力。";
+    hint.textContent = "它不想被关掉";
+    clearTimeout(timer);
+    timer = setTimeout(giveUp, LIMIT);
+  });
+
+  timer = setTimeout(giveUp, LIMIT);
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>№ 005 慢两秒的影子 · 无用发明</title>
+<meta name="theme-color" content="#08080a">
+<style>
+  :root { --accent: #ffa657; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #08080a;
+    color: #e9e9ec;
+    cursor: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .back {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    z-index: 2;
+    font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .16em;
+    color: #6b6b74;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .2s;
+  }
+  .back:hover { color: var(--accent); }
+  .hint {
+    position: fixed;
+    left: 50%;
+    bottom: 9vh;
+    transform: translateX(-50%);
+    z-index: 1;
+    font: 400 10px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .18em;
+    color: #4a4a52;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity .8s ease;
+  }
+  .hint.off { opacity: 0; }
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← 无用发明</a>
+<canvas id="cv"></canvas>
+<p class="hint" id="hint">移动光标<br>它总是比你慢两秒</p>
+<script>
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  const hint = document.getElementById("hint");
+
+  const DELAY = 2000;
+  const TRAIL = 2000;
+  const SAMPLES = [];
+
+  let W = 0;
+  let H = 0;
+  let dpr = 1;
+  let moved = false;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  window.addEventListener("pointermove", (e) => {
+    const t = performance.now();
+    SAMPLES.push({ x: e.clientX, y: e.clientY, t });
+    if (SAMPLES.length > 1200) SAMPLES.splice(0, 200);
+    if (!moved) {
+      moved = true;
+      hint.classList.add("off");
+    }
+  }, { passive: true });
+
+  function posAt(time) {
+    if (SAMPLES.length < 2) return null;
+    if (time <= SAMPLES[0].t || time >= SAMPLES[SAMPLES.length - 1].t) return null;
+    for (let i = 1; i < SAMPLES.length; i++) {
+      const b = SAMPLES[i];
+      if (b.t >= time) {
+        const a = SAMPLES[i - 1];
+        const k = (time - a.t) / Math.max(1, b.t - a.t);
+        return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+      }
+    }
+    return null;
+  }
+
+  function draw() {
+    const now = performance.now();
+    while (SAMPLES.length && now - SAMPLES[0].t > DELAY + TRAIL + 1200) SAMPLES.shift();
+
+    ctx.clearRect(0, 0, W, H);
+
+    const from = now - DELAY - TRAIL;
+    const to = now - DELAY;
+
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    for (let i = 1; i < SAMPLES.length; i++) {
+      const a = SAMPLES[i - 1];
+      const b = SAMPLES[i];
+      if (b.t <= from || b.t > to) continue;
+      const age = (to - b.t) / TRAIL;
+      const warm = Math.min(1, (b.t - SAMPLES[0].t) / 700);
+      ctx.strokeStyle = "rgba(255,166,87," + (0.34 * (1 - age) * warm).toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    const ghost = posAt(to);
+    if (ghost) {
+      ctx.save();
+      ctx.shadowColor = "rgba(255,166,87,.95)";
+      ctx.shadowBlur = 30;
+      ctx.fillStyle = "#ffa657";
+      ctx.beginPath();
+      ctx.arc(ghost.x, ghost.y, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const head = SAMPLES[SAMPLES.length - 1];
+    if (head) {
+      ctx.fillStyle = "rgba(233,233,236,.92)";
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+</script>
+</body>
+</html>

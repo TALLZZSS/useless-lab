@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 校验规则
+        run: npm run check
+
+      - name: 首页是否和 toys.json 同步
+        run: |
+          npm run build
+          if ! git diff --quiet; then
+            echo "::error::index.html 和 toys.json 不一致，请在本地跑一次 npm run build 并提交"
+            git --no-pager diff --stat
+            exit 1
+          fi
