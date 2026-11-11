@@ -55,8 +55,13 @@ npm run check               # 检查是不是守规矩
 
 ## 部署
 
-仓库自带 GitHub Pages 工作流。推到 `main` 之后，在 **Settings → Pages → Source** 里选 **GitHub Actions**，
-之后每次 push 都会自动发布。
+站点全是静态文件，用最省事的方式发布：
+
+1. 仓库 **Settings → Pages**
+2. **Source** 选 `Deploy from a branch`
+3. **Branch** 选 `main`，目录选 `/(root)`，**Save**
+
+根目录的 `.nojekyll` 让 Pages 原样托管文件、不跑 Jekyll。之后每次 push 到 `main`，Pages 会在半分钟左右自动重建。
 
 顺手把 `index.html` 页脚里的 GitHub 链接换成你的仓库地址。
 
@@ -73,7 +78,7 @@ useless-lab/
 │   ├── build.mjs           # 渲染首页
 │   ├── check.mjs           # 校验规则（CI 会跑）
 │   └── serve.mjs           # 本地预览，零依赖
-└── .github/workflows/      # ci.yml + pages.yml
+└── .github/workflows/      # ci.yml（推送时跑 check）
 ```
 
 ## 许可
