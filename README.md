@@ -4,6 +4,8 @@
 
 <sub>Useless things, made carefully. Every invention is one self-contained HTML file: no dependencies, no network, no tracking.</sub>
 
+**[在线打开 →](https://tallzzss.github.io/useless-lab/)**
+
 这里每一个发明都只做一件没用的小事，并且把它做到底。它们各自是一个独立的 HTML 文件：
 没有依赖、没有网络请求、没有账号、没有埋点——双击就能打开，断网也能用。
 
